@@ -1,4 +1,4 @@
-import api from './api';
+import api, { tokenManager } from './api';
 
 // Service para autenticação
 export const authService = {
@@ -10,14 +10,14 @@ export const authService = {
         password: credentials.password
       });
       
-      // Se houver token na resposta, salvar no localStorage
-      if (response.data.token) {
-        localStorage.setItem('authToken', response.data.token);
+      // Se houver token na resposta, salvar usando tokenManager
+      if (response.data.data.token) {
+        tokenManager.setToken(response.data.data.token);
       }
       
       // Se houver dados do usuário, salvar também
-      if (response.data.user) {
-        localStorage.setItem('userData', JSON.stringify(response.data.user));
+      if (response.data.data.user) {
+        localStorage.setItem('userData', JSON.stringify(response.data.data.user));
       }
       
       return {
@@ -40,8 +40,8 @@ export const authService = {
       // Fazer requisição para logout na API (se necessário)
       await api.post('/auth/logout');
       
-      // Limpar dados locais
-      localStorage.removeItem('authToken');
+      // Limpar dados locais usando tokenManager
+      tokenManager.removeToken();
       localStorage.removeItem('userData');
       
       return {
@@ -50,7 +50,7 @@ export const authService = {
       };
     } catch (error) {
       // Mesmo com erro na API, limpar dados locais
-      localStorage.removeItem('authToken');
+      tokenManager.removeToken();
       localStorage.removeItem('userData');
       
       return {
@@ -62,19 +62,23 @@ export const authService = {
 
   // Verificar se o usuário está autenticado
   isAuthenticated: () => {
-    const token = localStorage.getItem('authToken');
-    return !!token;
+    return tokenManager.isValidToken();
   },
 
   // Obter dados do usuário
   getUserData: () => {
-    const userData = localStorage.getItem('userData');
-    return userData ? JSON.parse(userData) : null;
+    try {
+      const userData = localStorage.getItem('userData');
+      return userData ? JSON.parse(userData) : null;
+    } catch (error) {
+      console.error('Erro ao obter dados do usuário:', error);
+      return null;
+    }
   },
 
   // Obter token
   getToken: () => {
-    return localStorage.getItem('authToken');
+    return tokenManager.getToken();
   },
 
   // Registrar novo usuário (se necessário)

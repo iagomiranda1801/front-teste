@@ -68,11 +68,27 @@ export const userService = {
   getAllUsers: async () => {
     try {
       const response = await api.get('/users');
+      console.log('Resposta da API ao obter todos os usuários:', response);
+      // Tratar diferentes estruturas de resposta da API
+      let usersData = response.data;
+      
+      // Se a resposta tem uma propriedade 'data', usar ela
+      if (response.data && response.data.data.users) {
+        usersData = response.data.data.users;
+      } else {
+        usersData = [response.data.data.user]
+      }
+      
+      // Garantir que sempre seja um array
+      if (!Array.isArray(usersData)) {
+        console.warn('⚠️ API retornou dados que não são array:', usersData);
+        usersData = [];
+      }
       
       return {
         success: true,
-        data: response.data,
-        message: 'Usuários obtidos com sucesso!'
+        data: usersData,
+        message: response.data.message || 'Usuários obtidos com sucesso!'
       };
     } catch (error) {
       return {

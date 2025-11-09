@@ -136,11 +136,11 @@ const Login = ({ onLogin }) => {
           text: result.message 
         });
         
-        // Chamar função de login e redirecionar após 2 segundos
-        setTimeout(() => {
-          console.log('Usuário logado com sucesso!', result.data);
-          onLogin && onLogin();
-        }, 2000);
+        // Redirecionar imediatamente após login bem-sucedido
+        console.log('Usuário logado com sucesso!', result.data);
+        
+        // Chamar onLogin imediatamente para redirecionar
+        onLogin && onLogin();
       } else {
         setMessage({ 
           type: 'error', 

@@ -12,6 +12,16 @@ function App() {
     // Verificar se o usuário está autenticado
     const checkAuth = () => {
       const authenticated = authService.isAuthenticated()
+      const token = authService.getToken()
+      const userData = authService.getUserData()
+      
+      console.log('🔍 Verificando autenticação:', {
+        authenticated,
+        hasToken: !!token,
+        hasUserData: !!userData,
+        token: token ? `${token.substring(0, 20)}...` : null
+      })
+      
       setIsAuthenticated(authenticated)
       setLoading(false)
     }
@@ -20,12 +30,23 @@ function App() {
 
     // Escutar mudanças no localStorage (logout em outra aba)
     const handleStorageChange = () => {
+      console.log('📱 LocalStorage mudou, verificando auth novamente')
       checkAuth()
     }
 
     window.addEventListener('storage', handleStorageChange)
     return () => window.removeEventListener('storage', handleStorageChange)
   }, [])
+
+  const handleLogin = () => {
+    console.log('🚀 Login bem-sucedido, redirecionando para dashboard...')
+    setIsAuthenticated(true)
+  }
+
+  const handleLogout = () => {
+    console.log('🚪 Fazendo logout...')
+    setIsAuthenticated(false)
+  }
 
   if (loading) {
     return (
@@ -45,9 +66,9 @@ function App() {
   return (
     <div className="App">
       {isAuthenticated ? (
-        <Dashboard onLogout={() => setIsAuthenticated(false)} />
+        <Dashboard onLogout={handleLogout} />
       ) : (
-        <Login onLogin={() => setIsAuthenticated(true)} />
+        <Login onLogin={handleLogin} />
       )}
     </div>
   )

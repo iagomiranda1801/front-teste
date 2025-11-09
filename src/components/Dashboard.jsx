@@ -30,6 +30,8 @@ import {
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import { authService } from '../services';
 import UserManagement from './UserManagement';
+import ClientProfile from './ClientProfile';
+import ClientSubscriptions from './ClientSubscriptions';
 
 const drawerWidth = 280;
 
@@ -65,6 +67,13 @@ const Dashboard = () => {
     // Obter dados do usuário logado
     const user = authService.getUserData();
     setUserData(user);
+    
+    // Definir menu inicial baseado no tipo de usuário
+    if (user?.type === 'client') {
+      setSelectedMenu('profile');
+    } else {
+      setSelectedMenu('users');
+    }
   }, []);
 
   const handleDrawerToggle = () => {
@@ -84,20 +93,43 @@ const Dashboard = () => {
     window.location.href = '/';
   };
 
-  const menuItems = [
-    {
-      id: 'users',
-      text: 'Usuários',
-      icon: <PeopleIcon />,
-      component: <UserManagement />
-    },
-    {
-      id: 'subscriptions',
-      text: 'Assinaturas',
-      icon: <AssignmentIcon />,
-      component: <div>Gerenciamento de Assinaturas (Em breve)</div>
-    },
-  ];
+  // Menu items baseado no tipo de usuário
+  const getMenuItems = () => {
+    if (userData?.type === 'client') {
+      return [
+        {
+          id: 'profile',
+          text: 'Meu Perfil',
+          icon: <PeopleIcon />,
+          component: <ClientProfile />
+        },
+        {
+          id: 'subscriptions',
+          text: 'Minhas Assinaturas',
+          icon: <AssignmentIcon />,
+          component: <ClientSubscriptions />
+        },
+      ];
+    }
+
+    // Menu para admin
+    return [
+      {
+        id: 'users',
+        text: 'Usuários',
+        icon: <PeopleIcon />,
+        component: <UserManagement />
+      },
+      {
+        id: 'subscriptions',
+        text: 'Assinaturas',
+        icon: <AssignmentIcon />,
+        component: <div>Gerenciamento de Assinaturas (Em breve)</div>
+      },
+    ];
+  };
+
+  const menuItems = getMenuItems();
 
   const drawer = (
     <div>
@@ -114,7 +146,7 @@ const Dashboard = () => {
       >
         <DashboardIcon />
         <Typography variant="h6" noWrap component="div">
-          Admin Dashboard
+          {userData?.type === 'client' ? 'Painel do Cliente' : 'Admin Dashboard'}
         </Typography>
       </Box>
 

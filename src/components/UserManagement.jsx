@@ -28,6 +28,8 @@ import {
   Tooltip,
   CircularProgress,
   Grid,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -40,6 +42,9 @@ import {
 import { userService, authService } from '../services';
 
 const UserManagement = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -67,13 +72,21 @@ const UserManagement = () => {
     setLoading(true);
     try {
       const result = await userService.getAllUsers();
+      console.log('🔍 Resultado da API getAllUsers:', result);
+      
       if (result.success) {
-        setUsers(result.data || []);
+        const usersData = result.data || [];
+        console.log('👥 Usuários recebidos:', usersData, 'É array?', Array.isArray(usersData));
+        setUsers(usersData);
       } else {
+        console.error('❌ Erro na API:', result.message);
         setMessage({ type: 'error', text: result.message });
+        setUsers([]); // Garantir que seja um array vazio em caso de erro
       }
     } catch (error) {
+      console.error('❌ Erro ao carregar usuários:', error);
       setMessage({ type: 'error', text: 'Erro ao carregar usuários' });
+      setUsers([]); // Garantir que seja um array vazio em caso de erro
     } finally {
       setLoading(false);
     }
@@ -193,7 +206,7 @@ const UserManagement = () => {
     }
   };
 
-  const filteredUsers = users.filter(user =>
+  const filteredUsers = (Array.isArray(users) ? users : []).filter(user =>
     user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -374,20 +387,42 @@ const UserManagement = () => {
         onClose={handleCloseDialog}
         maxWidth="sm"
         fullWidth
+        scroll="body"
         PaperProps={{
-          sx: { borderRadius: 3 }
+          sx: { 
+            borderRadius: 3,
+            margin: { xs: 2, sm: 3 }, // Margem responsiva
+            maxHeight: { xs: 'calc(100vh - 64px)', sm: 'calc(100vh - 100px)' }, // Altura máxima responsiva
+            position: 'relative',
+            top: { xs: 32, sm: 50 }, // Gap do header responsivo
+          }
+        }}
+        sx={{
+          '& .MuiDialog-container': {
+            alignItems: { xs: 'flex-start', sm: 'center' }, // Alinhamento responsivo
+            paddingTop: { xs: 2, sm: 0 }, // Padding top responsivo
+          }
         }}
       >
         <DialogTitle sx={{
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
           color: 'white',
+          pb: 2, // Padding inferior para dar espaço
+          mb: 1, // Margin inferior
         }}>
           {dialogMode === 'create' && 'Novo Usuário'}
           {dialogMode === 'edit' && 'Editar Usuário'}
           {dialogMode === 'view' && 'Visualizar Usuário'}
         </DialogTitle>
 
-        <DialogContent sx={{ pt: 3 }}>
+        <DialogContent sx={{ 
+          pt: { xs: 4, sm: 5 }, // Mais padding superior responsivo
+          pb: 3,
+          px: { xs: 2, sm: 3 }, // Padding horizontal responsivo
+          mt: 1, // Margin top adicional
+          maxHeight: { xs: '60vh', sm: '70vh' }, // Altura máxima do conteúdo
+          overflowY: 'auto', // Scroll quando necessário
+        }}>
           <Grid container spacing={2}>
             <Grid item xs={12}>
               <TextField
@@ -398,6 +433,7 @@ const UserManagement = () => {
                 error={!!formErrors.name}
                 helperText={formErrors.name}
                 disabled={dialogMode === 'view' || formLoading}
+                sx={{ mt: 1 }} // Margem superior adicional para o primeiro campo
               />
             </Grid>
 
@@ -449,8 +485,22 @@ const UserManagement = () => {
           </Grid>
         </DialogContent>
 
-        <DialogActions sx={{ p: 3 }}>
-          <Button onClick={handleCloseDialog} disabled={formLoading}>
+                <DialogActions sx={{ 
+          p: 3, 
+          pt: 2,
+          px: { xs: 2, sm: 3 }, // Padding horizontal responsivo
+          flexDirection: { xs: 'column', sm: 'row' }, // Stack vertical em mobile
+          gap: { xs: 1, sm: 2 }, // Gap entre botões
+        }}>
+          <Button 
+            onClick={handleCloseDialog} 
+            disabled={formLoading}
+            fullWidth={isMobile} // Full width em mobile
+            sx={{ 
+              minWidth: { xs: '100%', sm: 'auto' },
+              order: { xs: 2, sm: 1 } // Ordem dos botões em mobile
+            }}
+          >
             {dialogMode === 'view' ? 'Fechar' : 'Cancelar'}
           </Button>
           {dialogMode !== 'view' && (
@@ -458,11 +508,14 @@ const UserManagement = () => {
               onClick={handleSubmit}
               variant="contained"
               disabled={formLoading}
+              fullWidth={isMobile} // Full width em mobile
               sx={{
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                 '&:hover': {
                   background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
                 },
+                minWidth: { xs: '100%', sm: 'auto' },
+                order: { xs: 1, sm: 2 } // Ordem dos botões em mobile
               }}
             >
               {formLoading ? (
