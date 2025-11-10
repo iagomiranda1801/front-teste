@@ -5,19 +5,23 @@ export const authService = {
   // Login do usuário
   login: async (credentials) => {
     try {
-      const response = await api.post('/auth/login/user', {
+      const response = await api.post('/v1/auth/login', {
         email: credentials.email,
-        password: credentials.password
+        senha: credentials.password
       });
       
       // Se houver token na resposta, salvar usando tokenManager
-      if (response.data.data.token) {
-        tokenManager.setToken(response.data.data.token);
+      if (response.data.access_token) {
+        console.log('Salvando token de autenticação');
+        const token = response.data.access_token;
+        tokenManager.setToken(token);
       }
       
       // Se houver dados do usuário, salvar também
-      if (response.data.data.user) {
-        localStorage.setItem('userData', JSON.stringify(response.data.data.user));
+      if (response.data.user) {
+        console.log('Salvando dados do usuário');
+        const user = response.data.user;
+        localStorage.setItem('userData', JSON.stringify(user));
       }
       
       return {

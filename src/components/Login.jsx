@@ -100,13 +100,6 @@ const Login = ({ onLogin }) => {
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'Email inválido';
     }
-
-    if (!formData.password) {
-      newErrors.password = 'Senha é obrigatória';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Senha deve ter pelo menos 6 caracteres';
-    }
-
     return newErrors;
   };
 
@@ -122,7 +115,7 @@ const Login = ({ onLogin }) => {
 
     setIsLoading(true);
     setErrors({});
-
+    console.log('Enviando dados de login:', formData);
     try {
       // Chamar a API real
       const result = await authService.login({
@@ -340,7 +333,7 @@ const Login = ({ onLogin }) => {
                 </Divider>
 
                 {/* Link para cadastro */}
-                <Box sx={{ textAlign: 'center' }}>
+                {/* <Box sx={{ textAlign: 'center' }}>
                   <Typography variant="body2" color="text.secondary">
                     Não tem uma conta?{' '}
                     <Link
@@ -359,7 +352,7 @@ const Login = ({ onLogin }) => {
                       Cadastre-se
                     </Link>
                   </Typography>
-                </Box>
+                </Box> */}
               </Box>
             </CardContent>
           </Card>

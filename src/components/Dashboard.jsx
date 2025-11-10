@@ -21,8 +21,10 @@ import {
 import {
   Menu as MenuIcon,
   Dashboard as DashboardIcon,
+  Home as HomeIcon,
   People as PeopleIcon,
   Assignment as AssignmentIcon,
+  Business as BusinessIcon,
   AccountCircle,
   ExitToApp,
   ChevronLeft as ChevronLeftIcon,
@@ -30,8 +32,9 @@ import {
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import { authService } from '../services';
 import UserManagement from './UserManagement';
+import FuncionarioManagement from './FuncionarioManagement';
 import ClientProfile from './ClientProfile';
-import ClientSubscriptions from './ClientSubscriptions';
+import DashboardHome from './DashboardHome';
 
 const drawerWidth = 280;
 
@@ -72,7 +75,7 @@ const Dashboard = () => {
     if (user?.type === 'client') {
       setSelectedMenu('profile');
     } else {
-      setSelectedMenu('users');
+      setSelectedMenu('dashboard');
     }
   }, []);
 
@@ -103,17 +106,17 @@ const Dashboard = () => {
           icon: <PeopleIcon />,
           component: <ClientProfile />
         },
-        {
-          id: 'subscriptions',
-          text: 'Minhas Assinaturas',
-          icon: <AssignmentIcon />,
-          component: <ClientSubscriptions />
-        },
       ];
     }
 
     // Menu para admin
     return [
+      {
+        id: 'dashboard',
+        text: 'Dashboard',
+        icon: <HomeIcon />,
+        component: <DashboardHome />
+      },
       {
         id: 'users',
         text: 'Usuários',
@@ -121,10 +124,10 @@ const Dashboard = () => {
         component: <UserManagement />
       },
       {
-        id: 'subscriptions',
-        text: 'Assinaturas',
-        icon: <AssignmentIcon />,
-        component: <div>Gerenciamento de Assinaturas (Em breve)</div>
+        id: 'funcionarios',
+        text: 'Funcionários',
+        icon: <BusinessIcon />,
+        component: <FuncionarioManagement />
       },
     ];
   };
@@ -146,7 +149,7 @@ const Dashboard = () => {
       >
         <DashboardIcon />
         <Typography variant="h6" noWrap component="div">
-          {userData?.type === 'client' ? 'Painel do Cliente' : 'Admin Dashboard'}
+          {userData?.type === 'client' ? 'Painel do Cliente' : 'Dashboard'}
         </Typography>
       </Box>
 

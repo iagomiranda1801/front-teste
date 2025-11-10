@@ -43,19 +43,20 @@ import {
   Person as PersonIcon,
   Home as HomeIcon,
   Phone as PhoneIcon,
-  Lock as LockIcon,
+  Business as BusinessIcon,
+  Badge as BadgeIcon,
 } from '@mui/icons-material';
-import { userService, authService } from '../services';
+import { funcionarioService, authService } from '../services';
 
-const UserManagement = () => {
+const FuncionarioManagement = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  const [users, setUsers] = useState([]);
+  const [funcionarios, setFuncionarios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState('create'); // 'create', 'edit', 'view'
-  const [selectedUser, setSelectedUser] = useState(null);
+  const [selectedFuncionario, setSelectedFuncionario] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [message, setMessage] = useState({ type: '', text: '' });
   const [currentUser, setCurrentUser] = useState(null);
@@ -67,21 +68,22 @@ const UserManagement = () => {
   const [formData, setFormData] = useState({
     nome: '',
     email: '',
-    senha: '',
     cpf: '',
-    cidade: '',
-    uf: '',
+    matricula: '',
+    cargo: '',
+    salario: '',
+    dataAdmissao: '',
+    dataNascimento: '',
+    celular: '',
+    telefone: '',
     endereco: '',
     complemento: '',
     bairro: '',
     numero: '',
+    cidade: '',
+    uf: '',
     cep: '',
-    celular: '',
-    telefone: '',
-    dataNascimento: '',
-    tipoPessoa: 'F',
-    nomeFantasia: '',
-    role: 'funcionario', // Para controle interno do frontend
+    status: 'ativo', // ativo, inativo, licenca, ferias
   });
   const [formErrors, setFormErrors] = useState({});
   const [formLoading, setFormLoading] = useState(false);
@@ -89,10 +91,8 @@ const UserManagement = () => {
 
   // Função para buscar dados do CEP
   const fetchCepData = async (cep) => {
-    // Remove caracteres não numéricos
     const cleanCep = cep.replace(/\D/g, '');
     
-    // Verifica se o CEP tem 8 dígitos
     if (cleanCep.length !== 8) return;
 
     setCepLoading(true);
@@ -101,7 +101,6 @@ const UserManagement = () => {
       const data = await response.json();
 
       if (!data.erro) {
-        // Auto-preenche os campos de endereço
         setFormData(prev => ({
           ...prev,
           endereco: data.logradouro || prev.endereco,
@@ -110,7 +109,6 @@ const UserManagement = () => {
           uf: data.uf || prev.uf
         }));
 
-        // Remove erros dos campos que foram preenchidos automaticamente (se existirem)
         setFormErrors(prev => {
           const newErrors = { ...prev };
           if (data.logradouro && newErrors.endereco) delete newErrors.endereco;
@@ -146,75 +144,87 @@ const UserManagement = () => {
   useEffect(() => {
     const user = authService.getUserData();
     setCurrentUser(user);
-    loadUsers();
+    loadFuncionarios();
   }, []);
 
   // Funções utilitárias (devem ser declaradas antes dos hooks que as utilizam)
-  const getRoleLabel = (tipoAcesso) => {
-    if (tipoAcesso === 1) {
-      return 'Admin';
-    } else if (tipoAcesso === 0) {
-      return 'Funcionário';
-    } else {
-      return 'Não definido';
+  const getStatusLabel = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'ativo':
+        return 'Ativo';
+      case 'inativo':
+        return 'Inativo';
+      case 'licenca':
+        return 'Licença';
+      case 'ferias':
+        return 'Férias';
+      default:
+        return 'Não definido';
     }
   };
 
-  const getRoleColor = (tipoAcesso) => {
-    if (tipoAcesso === 1) {
-      return 'error'; // Admin - vermelho
-    } else {
-      return 'primary'; // Funcionário - azul
+  const getStatusColor = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'ativo':
+        return 'success';
+      case 'inativo':
+        return 'error';
+      case 'licenca':
+        return 'warning';
+      case 'ferias':
+        return 'info';
+      default:
+        return 'default';
     }
   };
 
-  const loadUsers = async () => {
+  const loadFuncionarios = async () => {
     setLoading(true);
     try {
-      const result = await userService.getAllUsers();
-      console.log('🔍 Resultado da API getAllUsers:', result);
+      const result = await funcionarioService.getAllFuncionarios(1, 1000);
+      console.log('🔍 Resultado da API getAllFuncionarios:', result);
 
       if (result.success) {
-        const usersData = result.data || [];
-        console.log('👥 Usuários recebidos:', usersData, 'É array?', Array.isArray(usersData));
-        setUsers(usersData);
+        const funcionariosData = result.data?.data || result.data || [];
+        console.log('👥 Funcionários recebidos:', funcionariosData, 'É array?', Array.isArray(funcionariosData));
+        setFuncionarios(funcionariosData);
       } else {
         console.error('❌ Erro na API:', result.message);
         setMessage({ type: 'error', text: result.message });
-        setUsers([]); // Garantir que seja um array vazio em caso de erro
+        setFuncionarios([]);
       }
     } catch (error) {
-      console.error('❌ Erro ao carregar usuários:', error);
-      setMessage({ type: 'error', text: 'Erro ao carregar usuários' });
-      setUsers([]); // Garantir que seja um array vazio em caso de erro
+      console.error('❌ Erro ao carregar funcionários:', error);
+      setMessage({ type: 'error', text: 'Erro ao carregar funcionários' });
+      setFuncionarios([]);
     } finally {
       setLoading(false);
     }
   };
 
-  // Filtrar usuários baseado no termo de busca
-  const filteredUsers = useMemo(() => {
-    if (!Array.isArray(users)) return [];
+  // Filtrar funcionários baseado no termo de busca
+  const filteredFuncionarios = useMemo(() => {
+    if (!Array.isArray(funcionarios)) return [];
 
     if (!searchTerm.trim()) {
-      return users;
+      return funcionarios;
     }
 
-    return users.filter(user => {
-      const nameMatch = (user.name && user.name.toLowerCase().includes(searchTerm.toLowerCase()));
-      const emailMatch = (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase()));
-      const nomeMatch = (user.nome && user.nome.toLowerCase().includes(searchTerm.toLowerCase()));
-      const roleMatch = user.tipoAcesso !== undefined && getRoleLabel(user.tipoAcesso).toLowerCase().includes(searchTerm.toLowerCase());
-      
-      return nameMatch || emailMatch || nomeMatch || roleMatch;
-    });
-  }, [users, searchTerm]);
+    return funcionarios.filter(funcionario =>
+      (funcionario.nome && funcionario.nome.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (funcionario.email && funcionario.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (funcionario.cpf && funcionario.cpf.includes(searchTerm)) ||
+      (funcionario.matricula && funcionario.matricula.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (funcionario.cargo && funcionario.cargo.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      getStatusLabel(funcionario.status).toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [funcionarios, searchTerm]);
 
-  // Paginação dos usuários filtrados
-  const paginatedUsers = useMemo(() => {
+  // Paginação dos funcionários filtrados
+  const paginatedFuncionarios = useMemo(() => {
     const startIndex = page * rowsPerPage;
-    return filteredUsers.slice(startIndex, startIndex + rowsPerPage);
-  }, [filteredUsers, page, rowsPerPage]);
+    return filteredFuncionarios.slice(startIndex, startIndex + rowsPerPage);
+  }, [filteredFuncionarios, page, rowsPerPage]);
 
   // Manipuladores da paginação
   const handleChangePage = (event, newPage) => {
@@ -232,49 +242,51 @@ const UserManagement = () => {
     setPage(0);
   };
 
-  const handleOpenDialog = (mode, user = null) => {
+  const handleOpenDialog = (mode, funcionario = null) => {
     setDialogMode(mode);
-    setSelectedUser(user);
+    setSelectedFuncionario(funcionario);
 
-    if (user) {
+    if (funcionario) {
       setFormData({
-        nome: user.name || user.nome || '',
-        email: user.email || '',
-        senha: '',
-        cpf: user.cpf || '',
-        cidade: user.cidade || '',
-        uf: user.uf || '',
-        endereco: user.endereco || '',
-        complemento: user.complemento || '',
-        bairro: user.bairro || '',
-        numero: user.numero || '',
-        cep: user.cep || '',
-        celular: user.celular || '',
-        telefone: user.telefone || '',
-        dataNascimento: user.dataNascimento || '',
-        tipoPessoa: user.tipoPessoa || 'F',
-        nomeFantasia: user.nomeFantasia || '',
-        role: user.tipoAcesso === 1 ? 'admin' : 'funcionario',
+        nome: funcionario.nome || '',
+        email: funcionario.email || '',
+        cpf: funcionario.cpf || '',
+        matricula: funcionario.matricula || '',
+        cargo: funcionario.cargo || '',
+        salario: funcionario.salario || '',
+        dataAdmissao: funcionario.dataAdmissao || '',
+        dataNascimento: funcionario.dataNascimento || '',
+        celular: funcionario.celular || '',
+        telefone: funcionario.telefone || '',
+        endereco: funcionario.endereco || '',
+        complemento: funcionario.complemento || '',
+        bairro: funcionario.bairro || '',
+        numero: funcionario.numero || '',
+        cidade: funcionario.cidade || '',
+        uf: funcionario.uf || '',
+        cep: funcionario.cep || '',
+        status: funcionario.status || 'ativo',
       });
     } else {
       setFormData({
         nome: '',
         email: '',
-        senha: '',
         cpf: '',
-        cidade: '',
-        uf: '',
+        matricula: '',
+        cargo: '',
+        salario: '',
+        dataAdmissao: '',
+        dataNascimento: '',
+        celular: '',
+        telefone: '',
         endereco: '',
         complemento: '',
         bairro: '',
         numero: '',
+        cidade: '',
+        uf: '',
         cep: '',
-        celular: '',
-        telefone: '',
-        dataNascimento: '',
-        tipoPessoa: 'F',
-        nomeFantasia: '',
-        role: 'funcionario',
+        status: 'ativo',
       });
     }
 
@@ -285,25 +297,26 @@ const UserManagement = () => {
 
   const handleCloseDialog = () => {
     setDialogOpen(false);
-    setSelectedUser(null);
+    setSelectedFuncionario(null);
     setFormData({
       nome: '',
       email: '',
-      senha: '',
       cpf: '',
-      cidade: '',
-      uf: '',
+      matricula: '',
+      cargo: '',
+      salario: '',
+      dataAdmissao: '',
+      dataNascimento: '',
+      celular: '',
+      telefone: '',
       endereco: '',
       complemento: '',
       bairro: '',
       numero: '',
+      cidade: '',
+      uf: '',
       cep: '',
-      celular: '',
-      telefone: '',
-      dataNascimento: '',
-      tipoPessoa: 'F',
-      nomeFantasia: '',
-      role: 'funcionario'
+      status: 'ativo',
     });
     setFormErrors({});
   };
@@ -322,14 +335,13 @@ const UserManagement = () => {
       errors.email = 'Email inválido';
     }
 
-    if (dialogMode === 'create' && !formData.senha) {
-      errors.senha = 'Senha é obrigatória';
-    } else if (formData.senha && formData.senha.length < 6) {
-      errors.senha = 'Senha deve ter pelo menos 6 caracteres';
+    if (!formData.cpf.trim()) {
+      errors.cpf = 'CPF é obrigatório';
     }
 
-    // Todos os outros campos são opcionais conforme a API
-    // CPF, cidade, uf, endereco, complemento, bairro, numero, cep, celular, telefone, dataNascimento, tipoPessoa, nomeFantasia
+    if (!formData.matricula.trim()) {
+      errors.matricula = 'Matrícula é obrigatória';
+    }
 
     return errors;
   };
@@ -349,36 +361,34 @@ const UserManagement = () => {
       const apiData = {
         nome: formData.nome.trim(),
         email: formData.email.trim().toLowerCase(),
-        senha: formData.senha,
         cpf: formData.cpf.replace(/\D/g, ''),
-        cidade: formData.cidade.trim(),
-        uf: formData.uf.trim().toUpperCase(),
+        matricula: formData.matricula.trim(),
+        cargo: formData.cargo.trim(),
+        salario: formData.salario ? parseFloat(formData.salario) : null,
+        dataAdmissao: formData.dataAdmissao,
+        dataNascimento: formData.dataNascimento,
+        celular: formData.celular.replace(/\D/g, ''),
+        telefone: formData.telefone.replace(/\D/g, ''),
         endereco: formData.endereco.trim(),
         complemento: formData.complemento.trim(),
         bairro: formData.bairro.trim(),
         numero: formData.numero.trim(),
+        cidade: formData.cidade.trim(),
+        uf: formData.uf.trim().toUpperCase(),
         cep: formData.cep.replace(/\D/g, ''),
-        celular: formData.celular.replace(/\D/g, ''),
-        telefone: formData.telefone.replace(/\D/g, ''),
-        dataNascimento: formData.dataNascimento,
-        tipoPessoa: formData.tipoPessoa,
-        nomeFantasia: formData.nomeFantasia.trim()
+        status: formData.status,
       };
 
       if (dialogMode === 'create') {
-        result = await userService.createUser(apiData);
+        result = await funcionarioService.createFuncionario(apiData);
       } else if (dialogMode === 'edit') {
-        // Para edição, só incluir senha se foi preenchida
-        if (!apiData.senha) {
-          delete apiData.senha;
-        }
-        result = await userService.updateUser(selectedUser.id, apiData);
+        result = await funcionarioService.updateFuncionario(selectedFuncionario.id, apiData);
       }
 
       if (result.success) {
         setMessage({ type: 'success', text: result.message });
         handleCloseDialog();
-        loadUsers();
+        loadFuncionarios();
       } else {
         setMessage({ type: 'error', text: result.message });
       }
@@ -389,23 +399,18 @@ const UserManagement = () => {
     }
   };
 
-  const handleDelete = async (user) => {
-    if (user.id === currentUser?.id) {
-      setMessage({ type: 'error', text: 'Você não pode excluir a si mesmo!' });
-      return;
-    }
-
-    if (window.confirm(`Tem certeza que deseja excluir o usuário ${user.name}?`)) {
+  const handleDelete = async (funcionario) => {
+    if (window.confirm(`Tem certeza que deseja inativar o funcionário ${funcionario.nome}?`)) {
       try {
-        const result = await userService.deleteUser(user.id);
+        const result = await funcionarioService.inativarFuncionario(funcionario.id);
         if (result.success) {
           setMessage({ type: 'success', text: result.message });
-          loadUsers();
+          loadFuncionarios();
         } else {
           setMessage({ type: 'error', text: result.message });
         }
       } catch (error) {
-        setMessage({ type: 'error', text: 'Erro ao excluir usuário' });
+        setMessage({ type: 'error', text: 'Erro ao inativar funcionário' });
       }
     }
   };
@@ -416,13 +421,13 @@ const UserManagement = () => {
       <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
         <Box>
           <Typography variant="h4" component="h1" sx={{ fontWeight: 600 }}>
-            Gerenciamento de Usuários
+            Gerenciamento de Funcionários
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
             {loading ? 'Carregando...' :
               searchTerm ?
-                `${filteredUsers.length} usuários encontrados de ${users.length} total` :
-                `${users.length} usuários cadastrados`
+                `${filteredFuncionarios.length} funcionários encontrados de ${funcionarios.length} total` :
+                `${funcionarios.length} funcionários cadastrados`
             }
           </Typography>
         </Box>
@@ -430,7 +435,7 @@ const UserManagement = () => {
           <Button
             variant="outlined"
             startIcon={<RefreshIcon />}
-            onClick={loadUsers}
+            onClick={loadFuncionarios}
             disabled={loading}
           >
             Atualizar
@@ -446,7 +451,7 @@ const UserManagement = () => {
               },
             }}
           >
-            Novo Usuário
+            Novo Funcionário
           </Button>
         </Box>
       </Box>
@@ -467,7 +472,7 @@ const UserManagement = () => {
         <CardContent>
           <TextField
             fullWidth
-            label="Pesquisar usuários"
+            label="Pesquisar funcionários"
             variant="outlined"
             value={searchTerm}
             onChange={handleSearchChange}
@@ -478,12 +483,12 @@ const UserManagement = () => {
                 </InputAdornment>
               ),
             }}
-            placeholder="Digite nome, email ou função..."
+            placeholder="Digite nome, email, CPF, matrícula, cargo ou status..."
           />
         </CardContent>
       </Card>
 
-      {/* Users Table */}
+      {/* Funcionarios Table */}
       <Card>
         <CardContent>
           {loading ? (
@@ -495,38 +500,39 @@ const UserManagement = () => {
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell>Usuário</TableCell>
+                    <TableCell>Funcionário</TableCell>
                     <TableCell>Email</TableCell>
-                    <TableCell>Tipo de Acesso</TableCell>
+                    <TableCell>Matrícula</TableCell>
+                    <TableCell>Cargo</TableCell>
+                    <TableCell>Status</TableCell>
                     <TableCell align="center">Ações</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {paginatedUsers.map((user) => (
-                    <TableRow key={user.id} hover>
+                  {paginatedFuncionarios.map((funcionario) => (
+                    <TableRow key={funcionario.id} hover>
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                           <Avatar sx={{ bgcolor: 'primary.main' }}>
-                            {(user.name || user.nome)?.charAt(0)?.toUpperCase()}
+                            {funcionario.nome?.charAt(0)?.toUpperCase()}
                           </Avatar>
                           <Box>
                             <Typography variant="subtitle2">
-                              {user.name || user.nome}
-                              {user.id === currentUser?.id && (
-                                <Chip label="Você" size="small" sx={{ ml: 1 }} />
-                              )}
+                              {funcionario.nome}
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
-                              ID: {user.id}
+                              ID: {funcionario.id}
                             </Typography>
                           </Box>
                         </Box>
                       </TableCell>
-                      <TableCell>{user.email}</TableCell>
+                      <TableCell>{funcionario.email}</TableCell>
+                      <TableCell>{funcionario.matricula}</TableCell>
+                      <TableCell>{funcionario.cargo}</TableCell>
                       <TableCell>
                         <Chip
-                          label={getRoleLabel(user.tipoAcesso)}
-                          color={getRoleColor(user.tipoAcesso)}
+                          label={getStatusLabel(funcionario.status)}
+                          color={getStatusColor(funcionario.status)}
                           size="small"
                         />
                       </TableCell>
@@ -535,7 +541,7 @@ const UserManagement = () => {
                           <Tooltip title="Visualizar">
                             <IconButton
                               color="info"
-                              onClick={() => handleOpenDialog('view', user)}
+                              onClick={() => handleOpenDialog('view', funcionario)}
                             >
                               <ViewIcon />
                             </IconButton>
@@ -543,30 +549,28 @@ const UserManagement = () => {
                           <Tooltip title="Editar">
                             <IconButton
                               color="primary"
-                              onClick={() => handleOpenDialog('edit', user)}
+                              onClick={() => handleOpenDialog('edit', funcionario)}
                             >
                               <EditIcon />
                             </IconButton>
                           </Tooltip>
-                          {user.id !== currentUser?.id && (
-                            <Tooltip title="Excluir">
-                              <IconButton
-                                color="error"
-                                onClick={() => handleDelete(user)}
-                              >
-                                <DeleteIcon />
-                              </IconButton>
-                            </Tooltip>
-                          )}
+                          <Tooltip title="Inativar">
+                            <IconButton
+                              color="error"
+                              onClick={() => handleDelete(funcionario)}
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          </Tooltip>
                         </Box>
                       </TableCell>
                     </TableRow>
                   ))}
-                  {filteredUsers.length === 0 && (
+                  {filteredFuncionarios.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={4} align="center" sx={{ py: 3 }}>
+                      <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
                         <Typography color="text.secondary">
-                          Nenhum usuário encontrado
+                          Nenhum funcionário encontrado
                         </Typography>
                       </TableCell>
                     </TableRow>
@@ -577,10 +581,10 @@ const UserManagement = () => {
           )}
 
           {/* Paginação */}
-          {!loading && filteredUsers.length > 0 && (
+          {!loading && filteredFuncionarios.length > 0 && (
             <TablePagination
               component="div"
-              count={filteredUsers.length}
+              count={filteredFuncionarios.length}
               page={page}
               onPageChange={handleChangePage}
               rowsPerPage={rowsPerPage}
@@ -600,7 +604,7 @@ const UserManagement = () => {
         </CardContent>
       </Card>
 
-      {/* User Dialog */}
+      {/* Funcionario Dialog */}
       <Dialog
         open={dialogOpen}
         onClose={handleCloseDialog}
@@ -610,28 +614,28 @@ const UserManagement = () => {
         PaperProps={{
           sx: {
             borderRadius: 3,
-            margin: { xs: 2, sm: 3 }, // Margem responsiva
-            maxHeight: { xs: 'calc(100vh - 64px)', sm: 'calc(100vh - 100px)' }, // Altura máxima responsiva
+            margin: { xs: 2, sm: 3 },
+            maxHeight: { xs: 'calc(100vh - 64px)', sm: 'calc(100vh - 100px)' },
             position: 'relative',
-            top: { xs: 32, sm: 50 }, // Gap do header responsivo
+            top: { xs: 32, sm: 50 },
           }
         }}
         sx={{
           '& .MuiDialog-container': {
-            alignItems: { xs: 'flex-start', sm: 'center' }, // Alinhamento responsivo
-            paddingTop: { xs: 2, sm: 0 }, // Padding top responsivo
+            alignItems: { xs: 'flex-start', sm: 'center' },
+            paddingTop: { xs: 2, sm: 0 },
           }
         }}
       >
         <DialogTitle sx={{
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
           color: 'white',
-          pb: 2, // Padding inferior para dar espaço
-          mb: 1, // Margin inferior
+          pb: 2,
+          mb: 1,
         }}>
-          {dialogMode === 'create' && 'Novo Usuário'}
-          {dialogMode === 'edit' && 'Editar Usuário'}
-          {dialogMode === 'view' && 'Visualizar Usuário'}
+          {dialogMode === 'create' && 'Novo Funcionário'}
+          {dialogMode === 'edit' && 'Editar Funcionário'}
+          {dialogMode === 'view' && 'Visualizar Funcionário'}
         </DialogTitle>
 
         <DialogContent sx={{
@@ -642,7 +646,8 @@ const UserManagement = () => {
           maxHeight: { xs: '70vh', sm: '80vh' },
           overflowY: 'auto',
         }}>
-          <Grid container xs={12} xll={12} sm={12} md={12} lg={12}>
+          {/* Dados Pessoais */}
+          <Grid container xs={12}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
               <PersonIcon sx={{ color: '#1976d2' }} />
               <Typography variant="h6" sx={{ color: '#1976d2', fontWeight: 600 }}>
@@ -651,17 +656,14 @@ const UserManagement = () => {
             </Box>
           </Grid>
           <Grid container spacing={2}>
-            {/* Dados Pessoais */}
-
-
-            <Grid style={{ width: '30%' }} item xs={12} xl={6} xll={6} md={6} lg={6}>
+            <Grid style={{ width: '30%' }} item xs={12} xl={6} md={6} lg={6}>
               <TextField
                 fullWidth
                 label="Nome Completo *"
                 value={formData.nome}
                 onChange={(e) => {
                   setFormData({ ...formData, nome: e.target.value });
-                  clearFieldError('nome'); // Remove erro ao digitar
+                  clearFieldError('nome');
                 }}
                 error={!!formErrors.nome}
                 helperText={formErrors.nome}
@@ -669,7 +671,7 @@ const UserManagement = () => {
               />
             </Grid>
 
-            <Grid style={{ width: '25%' }} item xs={12} xl={6} xll={6} md={6} lg={6}>
+            <Grid style={{ width: '25%' }} item xs={12} xl={6} md={6} lg={6}>
               <TextField
                 fullWidth
                 label="Email *"
@@ -677,7 +679,7 @@ const UserManagement = () => {
                 value={formData.email}
                 onChange={(e) => {
                   setFormData({ ...formData, email: e.target.value });
-                  clearFieldError('email'); // Remove erro ao digitar
+                  clearFieldError('email');
                 }}
                 error={!!formErrors.email}
                 helperText={formErrors.email}
@@ -685,16 +687,16 @@ const UserManagement = () => {
               />
             </Grid>
 
-            <Grid style={{ width: '20%' }} item xs={12} xl={6} xll={6} md={6} lg={6}>
+            <Grid style={{ width: '20%' }} item xs={12} xl={6} md={6} lg={6}>
               <TextField
                 fullWidth
-                label="CPF"
+                label="CPF *"
                 value={formData.cpf}
                 onChange={(e) => {
                   let value = e.target.value.replace(/\D/g, '');
                   value = value.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
                   setFormData({ ...formData, cpf: value });
-                  clearFieldError('cpf'); // Remove erro ao digitar
+                  clearFieldError('cpf');
                 }}
                 error={!!formErrors.cpf}
                 helperText={formErrors.cpf}
@@ -703,7 +705,7 @@ const UserManagement = () => {
               />
             </Grid>
 
-            <Grid style={{ width: '20%' }} item xs={12} xl={6} xll={6} md={6} lg={6}>
+            <Grid style={{ width: '20%' }} item xs={12} xl={6} md={6} lg={6}>
               <TextField
                 fullWidth
                 label="Data de Nascimento"
@@ -711,7 +713,7 @@ const UserManagement = () => {
                 value={formData.dataNascimento}
                 onChange={(e) => {
                   setFormData({ ...formData, dataNascimento: e.target.value });
-                  clearFieldError('dataNascimento'); // Remove erro ao digitar
+                  clearFieldError('dataNascimento');
                 }}
                 error={!!formErrors.dataNascimento}
                 helperText={formErrors.dataNascimento}
@@ -719,37 +721,106 @@ const UserManagement = () => {
                 InputLabelProps={{ shrink: true }}
               />
             </Grid>
+          </Grid>
 
-            <Grid style={{ width: '30%' }} item xs={12} xl={6} xll={6} md={6} lg={6}>
-              <Grid item xs={12}>
-                <FormControl fullWidth>
-                  <InputLabel>Tipo de Pessoa</InputLabel>
-                  <Select
-                    value={formData.tipoPessoa}
-                    label="Tipo de Pessoa"
-                    onChange={(e) => setFormData({ ...formData, tipoPessoa: e.target.value })}
-                    disabled={dialogMode === 'view' || formLoading}
-                  >
-                    <MenuItem value="F">Pessoa Física</MenuItem>
-                    <MenuItem value="J">Pessoa Jurídica</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
+          {/* Dados Profissionais */}
+          <Grid container xs={12}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 2, mb: 2 }}>
+              <BadgeIcon sx={{ color: '#1976d2' }} />
+              <Typography variant="h6" sx={{ color: '#1976d2', fontWeight: 600 }}>
+                Dados Profissionais
+              </Typography>
+            </Box>
+          </Grid>
+          <Grid container spacing={2}>
+            <Grid style={{ width: '25%' }} item xs={12} xl={6} md={6} lg={6}>
+              <TextField
+                fullWidth
+                label="Matrícula *"
+                value={formData.matricula}
+                onChange={(e) => {
+                  setFormData({ ...formData, matricula: e.target.value });
+                  clearFieldError('matricula');
+                }}
+                error={!!formErrors.matricula}
+                helperText={formErrors.matricula}
+                disabled={dialogMode === 'view' || formLoading}
+              />
             </Grid>
 
-            {formData.tipoPessoa === 'J' && (
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Nome Fantasia"
-                  value={formData.nomeFantasia}
-                  onChange={(e) => setFormData({ ...formData, nomeFantasia: e.target.value })}
-                  disabled={dialogMode === 'view' || formLoading}
-                />
-              </Grid>
-            )}
+            <Grid style={{ width: '25%' }} item xs={12} xl={6} md={6} lg={6}>
+              <TextField
+                fullWidth
+                label="Cargo"
+                value={formData.cargo}
+                onChange={(e) => {
+                  setFormData({ ...formData, cargo: e.target.value });
+                  clearFieldError('cargo');
+                }}
+                error={!!formErrors.cargo}
+                helperText={formErrors.cargo}
+                disabled={dialogMode === 'view' || formLoading}
+              />
+            </Grid>
 
+            <Grid style={{ width: '25%' }} item xs={12} xl={6} md={6} lg={6}>
+              <FormControl fullWidth error={!!formErrors.status}>
+                <InputLabel>Status</InputLabel>
+                <Select
+                  value={formData.status}
+                  label="Status"
+                  onChange={(e) => {
+                    setFormData({ ...formData, status: e.target.value });
+                    clearFieldError('status');
+                  }}
+                  disabled={dialogMode === 'view' || formLoading}
+                >
+                  <MenuItem value="ativo">Ativo</MenuItem>
+                  <MenuItem value="inativo">Inativo</MenuItem>
+                  <MenuItem value="licenca">Licença</MenuItem>
+                  <MenuItem value="ferias">Férias</MenuItem>
+                </Select>
+                {formErrors.status && (
+                  <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.5 }}>
+                    {formErrors.status}
+                  </Typography>
+                )}
+              </FormControl>
+            </Grid>
+
+            <Grid style={{ width: '20%' }} item xs={12} xl={6} md={6} lg={6}>
+              <TextField
+                fullWidth
+                label="Salário"
+                type="number"
+                value={formData.salario}
+                onChange={(e) => {
+                  setFormData({ ...formData, salario: e.target.value });
+                  clearFieldError('salario');
+                }}
+                error={!!formErrors.salario}
+                helperText={formErrors.salario}
+                disabled={dialogMode === 'view' || formLoading}
+                InputProps={{ startAdornment: <span>R$ </span> }}
+              />
+            </Grid>
+
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Data de Admissão"
+                type="date"
+                value={formData.dataAdmissao}
+                onChange={(e) => {
+                  setFormData({ ...formData, dataAdmissao: e.target.value });
+                }}
+                disabled={dialogMode === 'view' || formLoading}
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
           </Grid>
+
+          {/* Endereço */}
           <Grid container xs={12}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 2, mb: 2 }}>
               <HomeIcon sx={{ color: '#1976d2' }} />
@@ -759,7 +830,7 @@ const UserManagement = () => {
             </Box>
           </Grid>
           <Grid container spacing={2}>
-            <Grid style={{ width: '20%' }} item xs={12} xl={6} xll={6} md={6} lg={6}>
+            <Grid style={{ width: '20%' }} item xs={12} xl={6} md={6} lg={6}>
               <TextField
                 fullWidth
                 label="CEP"
@@ -768,12 +839,12 @@ const UserManagement = () => {
                   let value = e.target.value.replace(/\D/g, '');
                   value = value.replace(/(\d{5})(\d{3})/, '$1-$2');
                   setFormData({ ...formData, cep: value });
-                  clearFieldError('cep'); // Remove erro ao digitar
+                  clearFieldError('cep');
                 }}
                 onBlur={(e) => {
                   const cep = e.target.value;
                   if (cep && cep.length >= 8) {
-                    fetchCepData(cep); // Busca dados do CEP quando sair do campo
+                    fetchCepData(cep);
                   }
                 }}
                 error={!!formErrors.cep}
@@ -788,14 +859,14 @@ const UserManagement = () => {
               />
             </Grid>
 
-            <Grid style={{ width: '30%' }} item xs={12} xl={6} xll={6} md={6} lg={6}>
+            <Grid style={{ width: '30%' }} item xs={12} xl={6} md={6} lg={6}>
               <TextField
                 fullWidth
                 label="Endereço"
                 value={formData.endereco}
                 onChange={(e) => {
                   setFormData({ ...formData, endereco: e.target.value });
-                  clearFieldError('endereco'); // Remove erro ao digitar
+                  clearFieldError('endereco');
                 }}
                 error={!!formErrors.endereco}
                 helperText={formErrors.endereco}
@@ -803,14 +874,14 @@ const UserManagement = () => {
               />
             </Grid>
 
-            <Grid style={{ width: '20%' }} item xs={12} xl={6} xll={6} md={6} lg={6}>
+            <Grid style={{ width: '20%' }} item xs={12} xl={6} md={6} lg={6}>
               <TextField
                 fullWidth
                 label="Número"
                 value={formData.numero}
                 onChange={(e) => {
                   setFormData({ ...formData, numero: e.target.value });
-                  clearFieldError('numero'); // Remove erro ao digitar
+                  clearFieldError('numero');
                 }}
                 error={!!formErrors.numero}
                 helperText={formErrors.numero}
@@ -818,7 +889,7 @@ const UserManagement = () => {
               />
             </Grid>
 
-           <Grid style={{width: '25%'}} item xs={12} xl={6} xll={6} md={6} lg={6}>
+            <Grid style={{ width: '25%' }} item xs={12} xl={6} md={6} lg={6}>
               <TextField
                 fullWidth
                 label="Complemento"
@@ -828,14 +899,14 @@ const UserManagement = () => {
               />
             </Grid>
 
-              <Grid style={{width: '33%'}} item xs={12} xl={6} xll={6} md={6} lg={6}>
+            <Grid style={{ width: '33%' }} item xs={12} xl={6} md={6} lg={6}>
               <TextField
                 fullWidth
                 label="Bairro"
                 value={formData.bairro}
                 onChange={(e) => {
                   setFormData({ ...formData, bairro: e.target.value });
-                  clearFieldError('bairro'); // Remove erro ao digitar
+                  clearFieldError('bairro');
                 }}
                 error={!!formErrors.bairro}
                 helperText={formErrors.bairro}
@@ -850,7 +921,7 @@ const UserManagement = () => {
                 value={formData.cidade}
                 onChange={(e) => {
                   setFormData({ ...formData, cidade: e.target.value });
-                  clearFieldError('cidade'); // Remove erro ao digitar
+                  clearFieldError('cidade');
                 }}
                 error={!!formErrors.cidade}
                 helperText={formErrors.cidade}
@@ -865,7 +936,7 @@ const UserManagement = () => {
                 value={formData.uf}
                 onChange={(e) => {
                   setFormData({ ...formData, uf: e.target.value.toUpperCase() });
-                  clearFieldError('uf'); // Remove erro ao digitar
+                  clearFieldError('uf');
                 }}
                 error={!!formErrors.uf}
                 helperText={formErrors.uf}
@@ -873,9 +944,8 @@ const UserManagement = () => {
                 inputProps={{ maxLength: 2 }}
               />
             </Grid>
-
-
           </Grid>
+
           {/* Contato */}
           <Grid container xs={12}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 2, mb: 2 }}>
@@ -886,7 +956,7 @@ const UserManagement = () => {
             </Box>
           </Grid>
           <Grid container spacing={2}>
-            <Grid style={{width: '33%'}} item xs={12} xl={6} xll={6} md={6} lg={6}>
+            <Grid style={{ width: '33%' }} item xs={12} xl={6} md={6} lg={6}>
               <TextField
                 fullWidth
                 label="Celular"
@@ -895,7 +965,7 @@ const UserManagement = () => {
                   let value = e.target.value.replace(/\D/g, '');
                   value = value.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
                   setFormData({ ...formData, celular: value });
-                  clearFieldError('celular'); // Remove erro ao digitar
+                  clearFieldError('celular');
                 }}
                 error={!!formErrors.celular}
                 helperText={formErrors.celular}
@@ -904,7 +974,7 @@ const UserManagement = () => {
               />
             </Grid>
 
-            <Grid style={{width: '33%'}} item xs={12} xl={6} xll={6} md={6} lg={6}>
+            <Grid style={{ width: '33%' }} item xs={12} xl={6} md={6} lg={6}>
               <TextField
                 fullWidth
                 label="Telefone Fixo"
@@ -919,71 +989,22 @@ const UserManagement = () => {
               />
             </Grid>
           </Grid>
-          {/* Dados de Acesso */}
-          <Grid container xs={12}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 2, mb: 2 }}>
-              <LockIcon sx={{ color: '#1976d2' }} />
-              <Typography variant="h6" sx={{ color: '#1976d2', fontWeight: 600 }}>
-                Dados de Acesso
-              </Typography>
-            </Box>
-          </Grid>
-          <Grid container spacing={2}>
-             <Grid style={{width: '33%'}} item xs={12} xl={6} xll={6} md={6} lg={6}>
-              <TextField
-                fullWidth
-                label={dialogMode === 'edit' ? 'Nova Senha (deixe vazio para não alterar)' : 'Senha *'}
-                type="password"
-                value={formData.senha}
-                onChange={(e) => {
-                  setFormData({ ...formData, senha: e.target.value });
-                  clearFieldError('senha'); // Remove erro ao digitar
-                }}
-                error={!!formErrors.senha}
-                helperText={formErrors.senha}
-                disabled={dialogMode === 'view' || formLoading}
-              />
-            </Grid>
-
-            <Grid style={{width: '33%'}} item xs={12} xl={6} xll={6} md={6} lg={6}>
-              <FormControl fullWidth error={!!formErrors.role}>
-                <InputLabel>Tipo de Acesso</InputLabel>
-                <Select
-                  value={formData.role}
-                  label="Tipo de Acesso"
-                  onChange={(e) => {
-                    setFormData({ ...formData, role: e.target.value });
-                    clearFieldError('role'); // Remove erro ao selecionar
-                  }}
-                  disabled={dialogMode === 'view' || formLoading}
-                >
-                  <MenuItem value="funcionario">Funcionário</MenuItem>
-                  <MenuItem value="admin">Admin</MenuItem>
-                </Select>
-                {formErrors.role && (
-                  <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.5 }}>
-                    {formErrors.role}
-                  </Typography>
-                )}
-              </FormControl>
-            </Grid>
-          </Grid>
         </DialogContent>
 
         <DialogActions sx={{
           p: 3,
           pt: 2,
-          px: { xs: 2, sm: 3 }, // Padding horizontal responsivo
-          flexDirection: { xs: 'column', sm: 'row' }, // Stack vertical em mobile
-          gap: { xs: 1, sm: 2 }, // Gap entre botões
+          px: { xs: 2, sm: 3 },
+          flexDirection: { xs: 'column', sm: 'row' },
+          gap: { xs: 1, sm: 2 },
         }}>
           <Button
             onClick={handleCloseDialog}
             disabled={formLoading}
-            fullWidth={isMobile} // Full width em mobile
+            fullWidth={isMobile}
             sx={{
               minWidth: { xs: '100%', sm: 'auto' },
-              order: { xs: 2, sm: 1 } // Ordem dos botões em mobile
+              order: { xs: 2, sm: 1 }
             }}
           >
             {dialogMode === 'view' ? 'Fechar' : 'Cancelar'}
@@ -993,14 +1014,14 @@ const UserManagement = () => {
               onClick={handleSubmit}
               variant="contained"
               disabled={formLoading}
-              fullWidth={isMobile} // Full width em mobile
+              fullWidth={isMobile}
               sx={{
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                 '&:hover': {
                   background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
                 },
                 minWidth: { xs: '100%', sm: 'auto' },
-                order: { xs: 1, sm: 2 } // Ordem dos botões em mobile
+                order: { xs: 1, sm: 2 }
               }}
             >
               {formLoading ? (
@@ -1012,8 +1033,8 @@ const UserManagement = () => {
           )}
         </DialogActions>
       </Dialog>
-    </Box >
+    </Box>
   );
 };
 
-export default UserManagement;
+export default FuncionarioManagement;

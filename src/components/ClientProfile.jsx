@@ -30,7 +30,7 @@ import {
   Assignment as AssignmentIcon,
   Edit as EditIcon
 } from '@mui/icons-material';
-import { authService, userService, subscriptionService } from '../services';
+import { authService, userService } from '../services';
 
 const ClientProfile = () => {
   const [userData, setUserData] = useState(null);
@@ -44,7 +44,6 @@ const ClientProfile = () => {
 
   useEffect(() => {
     loadUserData();
-    loadSubscriptions();
   }, []);
 
   const loadUserData = async () => {
@@ -62,26 +61,7 @@ const ClientProfile = () => {
     }
   };
 
-  const loadSubscriptions = async () => {
-    try {
-      const subscriptionsData = await subscriptionService.getMySubscriptions();
-      setSubscriptions(subscriptionsData);
-    } catch (error) {
-      console.error('Erro ao carregar assinaturas:', error);
-      // Em caso de erro, usar dados mockados para demonstração
-      setSubscriptions([
-        {
-          id: 1,
-          plan: 'Plano Premium',
-          status: 'Ativo',
-          startDate: '2024-01-15',
-          endDate: '2024-12-15',
-          price: 'R$ 99,90/mês'
-        }
-      ]);
-      setMessage('Usando dados de demonstração (API indisponível)');
-    }
-  };
+
 
   const handleEditProfile = async () => {
     setLoading(true);

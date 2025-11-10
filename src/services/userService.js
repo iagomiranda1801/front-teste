@@ -2,16 +2,45 @@ import api from './api';
 
 // Service para usuários
 export const userService = {
+  // Buscar endereço por CEP
+  searchCEP: async (cep) => {
+    try {
+      const cleanCep = cep.replace(/\D/g, '');
+      if (cleanCep.length !== 8) {
+        throw new Error('CEP deve ter 8 dígitos');
+      }
+
+      const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+      const data = await response.json();
+
+      if (data.erro) {
+        throw new Error('CEP não encontrado');
+      }
+
+      return {
+        success: true,
+        data: {
+          endereco: data.logradouro || '',
+          bairro: data.bairro || '',
+          cidade: data.localidade || '',
+          uf: data.uf || '',
+          cep: data.cep || cleanCep
+        },
+        message: 'Endereço encontrado com sucesso!'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message || 'Erro ao buscar CEP. Verifique se o CEP está correto.',
+        error: error
+      };
+    }
+  },
   // Registrar novo usuário
   register: async (userData) => {
     try {
-      const response = await api.post('/auth/register/user/public', {
-        name: userData.name,
-        email: userData.email,
-        password: userData.password,
-        role: 'client' // Sempre cliente conforme solicitado
-      });
-      
+      const response = await api.post('/v1/auth/register', userData);
+      console.log(" Resposta do registro de usuário:", response.data);
       return {
         success: true,
         data: response.data,
@@ -67,16 +96,21 @@ export const userService = {
   // Listar todos os usuários (admin)
   getAllUsers: async () => {
     try {
-      const response = await api.get('/users');
+      const response = await api.get('/v1/users');
       console.log('Resposta da API ao obter todos os usuários:', response);
+      
       // Tratar diferentes estruturas de resposta da API
       let usersData = response.data;
       
       // Se a resposta tem uma propriedade 'data', usar ela
-      if (response.data && response.data.data.users) {
+      if (response.data && response.data.data && response.data.data.users) {
         usersData = response.data.data.users;
-      } else {
-        usersData = [response.data.data.user]
+      } else if (response.data && response.data.data && response.data.data.user) {
+        usersData = [response.data.data.user];
+      } else if (response.data && Array.isArray(response.data)) {
+        usersData = response.data;
+      } else if (response.data && response.data.users) {
+        usersData = response.data.users;
       }
       
       // Garantir que sempre seja um array
@@ -102,7 +136,7 @@ export const userService = {
   // Obter usuário específico por ID (admin)
   getUserById: async (userId) => {
     try {
-      const response = await api.get(`/users/${userId}`);
+      const response = await api.get(`/v1/users/${userId}`);
       
       return {
         success: true,
@@ -121,7 +155,7 @@ export const userService = {
   // Criar usuário (admin)
   createUser: async (userData) => {
     try {
-      const response = await api.post('/users', userData);
+      const response = await api.post('/v1/users', userData);
       
       return {
         success: true,
@@ -140,7 +174,7 @@ export const userService = {
   // Atualizar usuário (admin)
   updateUser: async (userId, userData) => {
     try {
-      const response = await api.put(`/users/${userId}`, userData);
+      const response = await api.put(`/v1/users/${userId}`, userData);
       
       return {
         success: true,
@@ -159,7 +193,7 @@ export const userService = {
   // Deletar usuário (admin)
   deleteUser: async (userId) => {
     try {
-      const response = await api.delete(`/users/${userId}`);
+      const response = await api.delete(`/v1/users/${userId}`);
       
       return {
         success: true,
