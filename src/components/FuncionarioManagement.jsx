@@ -363,7 +363,7 @@ const FuncionarioManagement = () => {
         email: formData.email.trim().toLowerCase(),
         cpf: formData.cpf.replace(/\D/g, ''),
         matricula: formData.matricula.trim(),
-        cargo: formData.cargo.trim(),
+        codigoCargo: formData.cargo.trim(),
         salario: formData.salario ? parseFloat(formData.salario) : null,
         dataAdmissao: formData.dataAdmissao,
         dataNascimento: formData.dataNascimento,
@@ -374,7 +374,7 @@ const FuncionarioManagement = () => {
         bairro: formData.bairro.trim(),
         numero: formData.numero.trim(),
         cidade: formData.cidade.trim(),
-        uf: formData.uf.trim().toUpperCase(),
+        estado: formData.uf.trim().toUpperCase(),
         cep: formData.cep.replace(/\D/g, ''),
         status: formData.status,
       };

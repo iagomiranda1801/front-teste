@@ -14,6 +14,10 @@ import {
   Container,
   Avatar,
   Divider,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import { 
   LockOutlined as LockIcon,
@@ -75,6 +79,22 @@ const Login = ({ onLogin }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [registerModalOpen, setRegisterModalOpen] = useState(false);
+  const [forgotPasswordModalOpen, setForgotPasswordModalOpen] = useState(false);
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
+  const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
+  const [forgotPasswordMessage, setForgotPasswordMessage] = useState({ type: '', text: '' });
+  
+  // Estados para o modal de redefinir senha
+  const [resetPasswordModalOpen, setResetPasswordModalOpen] = useState(false);
+  const [resetPasswordData, setResetPasswordData] = useState({
+    token: '',
+    novaSenha: '',
+    confirmPassword: ''
+  });
+  const [resetPasswordLoading, setResetPasswordLoading] = useState(false);
+  const [resetPasswordMessage, setResetPasswordMessage] = useState({ type: '', text: '' });
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -148,6 +168,133 @@ const Login = ({ onLogin }) => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!forgotPasswordEmail) {
+      setForgotPasswordMessage({ type: 'error', text: 'Por favor, insira seu email.' });
+      return;
+    }
+
+    if (!/\S+@\S+\.\S+/.test(forgotPasswordEmail)) {
+      setForgotPasswordMessage({ type: 'error', text: 'Por favor, insira um email válido.' });
+      return;
+    }
+
+    setForgotPasswordLoading(true);
+    setForgotPasswordMessage({ type: '', text: '' }); // Limpa mensagens anteriores
+    
+    try {
+      const response = await fetch('http://supply.i4app.com.br/api/v1/auth/recuperar-senha', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: forgotPasswordEmail
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        setForgotPasswordMessage({ 
+          type: 'success', 
+          text: 'Instruções de recuperação enviadas para seu email!' 
+        });
+        // Fechar modal de esqueci senha e abrir modal de redefinir senha após 2 segundos
+        setTimeout(() => {
+          setForgotPasswordModalOpen(false);
+          setForgotPasswordEmail('');
+          setForgotPasswordMessage({ type: '', text: '' });
+          setResetPasswordModalOpen(true);
+        }, 2000);
+      } else {
+        setForgotPasswordMessage({ 
+          type: 'error', 
+          text: result.message || 'Erro ao enviar email de recuperação.' 
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao recuperar senha:', error);
+      setForgotPasswordMessage({ 
+        type: 'error', 
+        text: 'Erro de conexão. Tente novamente mais tarde.' 
+      });
+    } finally {
+      setForgotPasswordLoading(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    // Validações
+    if (!resetPasswordData.token.trim()) {
+      setResetPasswordMessage({ type: 'error', text: 'Por favor, insira o token recebido por email.' });
+      return;
+    }
+
+    if (!resetPasswordData.novaSenha) {
+      setResetPasswordMessage({ type: 'error', text: 'Por favor, insira a nova senha.' });
+      return;
+    }
+
+    if (resetPasswordData.novaSenha.length < 6) {
+      setResetPasswordMessage({ type: 'error', text: 'A senha deve ter pelo menos 6 caracteres.' });
+      return;
+    }
+
+    if (resetPasswordData.novaSenha !== resetPasswordData.confirmPassword) {
+      setResetPasswordMessage({ type: 'error', text: 'As senhas não coincidem.' });
+      return;
+    }
+
+    setResetPasswordLoading(true);
+    setResetPasswordMessage({ type: '', text: '' });
+
+    try {
+      const response = await fetch('http://supply.i4app.com.br/api/v1/auth/redefinir-senha', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          token: resetPasswordData.token,
+          novaSenha: resetPasswordData.novaSenha
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        setResetPasswordMessage({ 
+          type: 'success', 
+          text: 'Senha redefinida com sucesso!' 
+        });
+        // Fechar modal após 2 segundos e mostrar mensagem na tela principal
+        setTimeout(() => {
+          setResetPasswordModalOpen(false);
+          setResetPasswordData({ token: '', novaSenha: '', confirmPassword: '' });
+          setResetPasswordMessage({ type: '', text: '' });
+          setMessage({ 
+            type: 'success', 
+            text: 'Senha redefinida com sucesso! Você já pode fazer login com a nova senha.' 
+          });
+        }, 2000);
+      } else {
+        setResetPasswordMessage({ 
+          type: 'error', 
+          text: result.message || 'Erro ao redefinir senha.' 
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao redefinir senha:', error);
+      setResetPasswordMessage({ 
+        type: 'error', 
+        text: 'Erro de conexão. Tente novamente mais tarde.' 
+      });
+    } finally {
+      setResetPasswordLoading(false);
     }
   };
 
@@ -284,6 +431,10 @@ const Login = ({ onLogin }) => {
                   <Link
                     href="#"
                     variant="body2"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setForgotPasswordModalOpen(true);
+                    }}
                     sx={{
                       color: 'primary.main',
                       textDecoration: 'none',
@@ -358,6 +509,274 @@ const Login = ({ onLogin }) => {
           </Card>
         </Container>
       </Box>
+
+      {/* Modal de Esqueci a Senha */}
+      <Dialog 
+        open={forgotPasswordModalOpen} 
+        onClose={() => {
+          setForgotPasswordModalOpen(false);
+          setForgotPasswordEmail('');
+          setForgotPasswordMessage({ type: '', text: '' });
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ textAlign: 'center', fontWeight: 'bold' }}>
+          Recuperar Senha
+        </DialogTitle>
+        <DialogContent sx={{ pb: 2 }}>
+          <Typography variant="body2" sx={{ mb: 3, textAlign: 'center', color: 'text.secondary' }}>
+            Digite seu email para receber as instruções de recuperação de senha
+          </Typography>
+          
+          {/* Mensagem de erro/sucesso dentro do modal */}
+          {forgotPasswordMessage.text && (
+            <Alert 
+              severity={forgotPasswordMessage.type === 'error' ? 'error' : 'success'} 
+              sx={{ mb: 2 }}
+            >
+              {forgotPasswordMessage.text}
+            </Alert>
+          )}
+          
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Email"
+            type="email"
+            fullWidth
+            variant="outlined"
+            value={forgotPasswordEmail}
+            onChange={(e) => {
+              setForgotPasswordEmail(e.target.value);
+              // Limpar mensagem quando usuário começar a digitar
+              if (forgotPasswordMessage.text) {
+                setForgotPasswordMessage({ type: '', text: '' });
+              }
+            }}
+            error={forgotPasswordEmail && !/\S+@\S+\.\S+/.test(forgotPasswordEmail)}
+            helperText={
+              forgotPasswordEmail && !/\S+@\S+\.\S+/.test(forgotPasswordEmail) 
+                ? 'Digite um email válido' 
+                : ''
+            }
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 2,
+              },
+            }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ p: 3, pt: 1 }}>
+          <Button 
+            onClick={() => {
+              setForgotPasswordModalOpen(false);
+              setForgotPasswordEmail('');
+              setForgotPasswordMessage({ type: '', text: '' });
+            }}
+            sx={{ 
+              mr: 1,
+              textTransform: 'none',
+              fontWeight: 600,
+            }}
+          >
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleForgotPassword}
+            variant="contained"
+            disabled={forgotPasswordLoading || !forgotPasswordEmail.trim()}
+            sx={{
+              textTransform: 'none',
+              fontWeight: 600,
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+              },
+              '&:disabled': {
+                background: '#ccc',
+                color: '#666',
+              },
+            }}
+          >
+            {forgotPasswordLoading ? (
+              <CircularProgress size={20} color="inherit" />
+            ) : (
+              'Enviar'
+            )}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Modal de Redefinir Senha */}
+      <Dialog 
+        open={resetPasswordModalOpen} 
+        onClose={() => {
+          setResetPasswordModalOpen(false);
+          setResetPasswordData({ token: '', novaSenha: '', confirmPassword: '' });
+          setResetPasswordMessage({ type: '', text: '' });
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ textAlign: 'center', fontWeight: 'bold' }}>
+          Redefinir Senha
+        </DialogTitle>
+        <DialogContent sx={{ pb: 2 }}>
+          <Typography variant="body2" sx={{ mb: 3, textAlign: 'center', color: 'text.secondary' }}>
+            Digite o token recebido por email e sua nova senha
+          </Typography>
+          
+          {/* Mensagem de erro/sucesso dentro do modal */}
+          {resetPasswordMessage.text && (
+            <Alert 
+              severity={resetPasswordMessage.type === 'error' ? 'error' : 'success'} 
+              sx={{ mb: 2 }}
+            >
+              {resetPasswordMessage.text}
+            </Alert>
+          )}
+          
+          {/* Campo Token */}
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Token"
+            type="text"
+            fullWidth
+            variant="outlined"
+            value={resetPasswordData.token}
+            onChange={(e) => {
+              setResetPasswordData(prev => ({ ...prev, token: e.target.value }));
+              // Limpar mensagem quando usuário começar a digitar
+              if (resetPasswordMessage.text) {
+                setResetPasswordMessage({ type: '', text: '' });
+              }
+            }}
+            placeholder="Cole aqui o token recebido por email"
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 2,
+              },
+              mb: 2
+            }}
+          />
+
+          {/* Campo Nova Senha */}
+          <TextField
+            margin="dense"
+            label="Nova Senha"
+            type={showNewPassword ? 'text' : 'password'}
+            fullWidth
+            variant="outlined"
+            value={resetPasswordData.novaSenha}
+            onChange={(e) => {
+              setResetPasswordData(prev => ({ ...prev, novaSenha: e.target.value }));
+              if (resetPasswordMessage.text) {
+                setResetPasswordMessage({ type: '', text: '' });
+              }
+            }}
+            InputProps={{
+              endAdornment: (
+                <Button
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                  sx={{ minWidth: 'auto', p: 1 }}
+                >
+                  {showNewPassword ? <VisibilityOff /> : <Visibility />}
+                </Button>
+              ),
+            }}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 2,
+              },
+              mb: 2
+            }}
+          />
+
+          {/* Campo Confirmar Senha */}
+          <TextField
+            margin="dense"
+            label="Confirmar Nova Senha"
+            type={showConfirmPassword ? 'text' : 'password'}
+            fullWidth
+            variant="outlined"
+            value={resetPasswordData.confirmPassword}
+            onChange={(e) => {
+              setResetPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }));
+              if (resetPasswordMessage.text) {
+                setResetPasswordMessage({ type: '', text: '' });
+              }
+            }}
+            error={resetPasswordData.confirmPassword && resetPasswordData.novaSenha !== resetPasswordData.confirmPassword}
+            helperText={
+              resetPasswordData.confirmPassword && resetPasswordData.novaSenha !== resetPasswordData.confirmPassword
+                ? 'As senhas não coincidem' 
+                : ''
+            }
+            InputProps={{
+              endAdornment: (
+                <Button
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  sx={{ minWidth: 'auto', p: 1 }}
+                >
+                  {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                </Button>
+              ),
+            }}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 2,
+              },
+            }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ p: 3, pt: 1 }}>
+          <Button 
+            onClick={() => {
+              setResetPasswordModalOpen(false);
+              setResetPasswordData({ token: '', novaSenha: '', confirmPassword: '' });
+              setResetPasswordMessage({ type: '', text: '' });
+            }}
+            sx={{ 
+              mr: 1,
+              textTransform: 'none',
+              fontWeight: 600,
+            }}
+          >
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleResetPassword}
+            variant="contained"
+            disabled={
+              resetPasswordLoading || 
+              !resetPasswordData.token.trim() || 
+              !resetPasswordData.novaSenha || 
+              !resetPasswordData.confirmPassword ||
+              resetPasswordData.novaSenha !== resetPasswordData.confirmPassword
+            }
+            sx={{
+              textTransform: 'none',
+              fontWeight: 600,
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+              },
+              '&:disabled': {
+                background: '#ccc',
+                color: '#666',
+              },
+            }}
+          >
+            {resetPasswordLoading ? (
+              <CircularProgress size={20} color="inherit" />
+            ) : (
+              'Redefinir Senha'
+            )}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Modal de Registro */}
       <RegisterModal

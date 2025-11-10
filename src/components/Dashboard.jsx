@@ -35,6 +35,7 @@ import UserManagement from './UserManagement';
 import FuncionarioManagement from './FuncionarioManagement';
 import ClientProfile from './ClientProfile';
 import DashboardHome from './DashboardHome';
+import UserProfile from './UserProfile';
 
 const drawerWidth = 280;
 
@@ -91,6 +92,12 @@ const Dashboard = () => {
     setAnchorEl(null);
   };
 
+  const handleGoToProfile = () => {
+    setSelectedMenu('profile');
+    setAnchorEl(null);
+    if (isMobile) setMobileOpen(false);
+  };
+
   const handleLogout = async () => {
     await authService.logout();
     window.location.href = '/';
@@ -128,6 +135,12 @@ const Dashboard = () => {
         text: 'Funcionários',
         icon: <BusinessIcon />,
         component: <FuncionarioManagement />
+      },
+      {
+        id: 'profile',
+        text: 'Meu Perfil',
+        icon: <AccountCircle />,
+        component: <UserProfile />
       },
     ];
   };
@@ -219,7 +232,11 @@ const Dashboard = () => {
 
             {/* User Menu */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography variant="body2" sx={{ display: { xs: 'none', sm: 'block' } }}>
+              <Typography
+                variant="body2"
+                sx={{ display: { xs: 'none', sm: 'block' }, cursor: 'pointer', fontWeight: 600 }}
+                onClick={handleGoToProfile}
+              >
                 Olá, {userData?.name || 'Usuário'}
               </Typography>
               <IconButton
@@ -261,7 +278,7 @@ const Dashboard = () => {
           open={Boolean(anchorEl)}
           onClose={handleProfileMenuClose}
         >
-          <MenuItem onClick={handleProfileMenuClose}>
+          <MenuItem onClick={() => { setSelectedMenu('profile'); handleProfileMenuClose(); }}>
             <ListItemIcon>
               <AccountCircle fontSize="small" />
             </ListItemIcon>
