@@ -30,11 +30,58 @@ export const authService = {
         message: response.data.message || 'Login realizado com sucesso!'
       };
     } catch (error) {
-      return {
-        success: false,
-        message: error.response?.data?.message || 'Erro ao fazer login. Verifique suas credenciais.',
-        error: error.response?.data || error.message
-      };
+      console.error('Erro no login via axios, tentando fetch direto:', error);
+      
+      // Se falhar com axios, tentar com fetch direto (para contornar CORS em produção)
+      try {
+        const apiUrl = import.meta.env.VITE_API_BASE_URL || 'https://supply.i4app.com.br/api';
+        const fetchResponse = await fetch(`${apiUrl}/v1/auth/login`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify({
+            email: credentials.email,
+            senha: credentials.password
+          }),
+        });
+
+        if (!fetchResponse.ok) {
+          const errorData = await fetchResponse.json();
+          throw new Error(errorData.message || 'Erro na autenticação');
+        }
+
+        const data = await fetchResponse.json();
+        
+        // Se houver token na resposta, salvar usando tokenManager
+        if (data.access_token) {
+          console.log('Salvando token de autenticação (fetch)');
+          const token = data.access_token;
+          tokenManager.setToken(token);
+        }
+        
+        // Se houver dados do usuário, salvar também
+        if (data.user) {
+          console.log('Salvando dados do usuário (fetch)');
+          const user = data.user;
+          localStorage.setItem('userData', JSON.stringify(user));
+        }
+        
+        return {
+          success: true,
+          data: data,
+          message: data.message || 'Login realizado com sucesso!'
+        };
+        
+      } catch (fetchError) {
+        console.error('Erro no login via fetch:', fetchError);
+        return {
+          success: false,
+          message: fetchError.message || 'Erro ao fazer login. Verifique suas credenciais.',
+          error: fetchError
+        };
+      }
     }
   },
 

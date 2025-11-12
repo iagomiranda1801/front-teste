@@ -10,7 +10,9 @@ const api = axios.create({
   timeout: import.meta.env.VITE_API_TIMEOUT || 10000,
   headers: {
     'Content-Type': 'application/json',
+    'Accept': 'application/json',
   },
+  withCredentials: false, // Importante para CORS
 });
 
 // Funções para gerenciar token
